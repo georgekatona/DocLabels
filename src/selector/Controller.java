@@ -1,7 +1,6 @@
 package selector;
 
 import javafx.fxml.FXML;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.image.Image;
@@ -41,16 +40,13 @@ public class Controller {
     @FXML
     private AnchorPane parent;
     @FXML
-    private CheckBox saveLabelsDataCB;
-    @FXML
     private ImageView imageToLabel;
 
     private int currentImageIndex;
     private List<File> images;
     private List<List<Fragment>> fragments = new ArrayList<>();
 
-    List<Stack<Fragment>> deletedFragments = new Stack<>();
-    private File scriptFile;
+    private List<Stack<Fragment>> deletedFragments = new Stack<>();
 
     public Controller() {
         rect = new Rectangle(0, 0, 0, 0);
@@ -215,20 +211,9 @@ public class Controller {
         parent.getChildren().add(finalRect);
     }
 
-    private double getWidthPixelsFromCoordinate(double x) {
-        return x * (imageWidth / getShownImageWidth());
-    }
-
-    private double getHeightPixelsFromCoordinate(double y) {
-        return y * (imageHeight / getShownImageHeight());
-    }
-
     public void saveFragments() {
         if (!isFragmentsEmpty()) {
-            saveScript();
-            if (saveLabelsDataCB.isSelected()) {
-                saveLabels();
-            }
+            saveLabelRatio();
         }
     }
 
@@ -240,64 +225,46 @@ public class Controller {
         return true;
     }
 
-    private void saveScript() {
+    private void saveLabelRatio() {
         try {
             FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Save Image");
-            scriptFile = fileChooser.showSaveDialog(parent.getScene().getWindow());
-            BufferedWriter writer = new BufferedWriter(new FileWriter(scriptFile));
-            writer.write(getScript());
+            fileChooser.setTitle("Save Ratio");
+            File ratioFile = fileChooser.showSaveDialog(parent.getScene().getWindow());
+            BufferedWriter writer = new BufferedWriter(new FileWriter(ratioFile));
+            writer.write(getLabelRatioData());
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void saveLabels() {
-        try {
-            File file = new File(scriptFile.getParent() + File.separator + LABEL_DATA_NAME);
-            BufferedWriter writer = new BufferedWriter(new FileWriter(file));
-            writer.write(getLabelData());
-            writer.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private String getLabelData() {
+    private String getLabelRatioData() {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < images.size(); i++)
-            for (int j = 0; j < fragments.get(i).size(); j++) {
-                sb.append(getFileName(i, j)).append(";").append(fragments.get(i).get(j).getLabel()).append("\n");
+        for (int i = 0; i < images.size(); i++) {
+            List<Fragment> fragments = this.fragments.get(i);
+            if (!fragments.isEmpty()) {
+                sb.append(images.get(i).getName()).append(",")
+                        .append(calculateLabelRatio(fragments, Label.TEXT)).append(",")
+                        .append(calculateLabelRatio(fragments, Label.FORMULA)).append(",")
+                        .append(calculateLabelRatio(fragments, Label.TABLE)).append(",")
+                        .append(calculateLabelRatio(fragments, Label.REFERENCE)).append(",")
+                        .append(calculateLabelRatio(fragments, Label.FIGURE)).append("\n");
             }
+        }
         return sb.toString();
     }
 
-    private String getScript() {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < images.size(); i++)
-            for (int j = 0; j < fragments.get(i).size(); j++) {
-                Fragment f = fragments.get(i).get(j);
-                sb.append("convert ").append(images.get(i).getName()).append(" -crop ")
-                        .append(getWidthPixelsFromCoordinate(f.getWidth())).append("x")
-                        .append(getHeightPixelsFromCoordinate(f.getHeight())).append("+")
-                        .append(getWidthPixelsFromCoordinate(f.getxOffset())).append("+")
-                        .append(getHeightPixelsFromCoordinate(f.getyOffset())).append(" ")
-                        .append(getFileName(i, j)).append("\n");
+    private double calculateLabelRatio(List<Fragment> fragments, Label label) {
+        double sumArea = 0;
+        double labelArea = 0;
+        for (Fragment f : fragments) {
+            double fragmentArea = (f.getWidth() * f.getHeight());
+            sumArea += fragmentArea;
+            if (f.getLabel().equals(label)) {
+                labelArea += fragmentArea;
             }
-        return sb.toString();
-    }
-
-    private String getFileName(int fileIndex, int fragmentIndex) {
-        return "fragment_" + removeFileExtension(images.get(fileIndex).getName()) + "_" + fragmentIndex + ".png";
-    }
-
-    private String removeFileExtension(String fileName) {
-        if (fileName.indexOf(".") > 0) {
-            return fileName.substring(0, fileName.lastIndexOf("."));
-        } else {
-            return fileName;
         }
+        return labelArea / sumArea;
     }
 
     public void openImages() {
@@ -307,7 +274,7 @@ public class Controller {
         deletedFragments.clear();
         removeAllRects();
 
-        if (images.size() > 0) {
+        if (images != null && images.size() > 0) {
             currentImageIndex = 0;
             showImage(images.get(currentImageIndex));
 
