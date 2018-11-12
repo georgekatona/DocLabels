@@ -243,10 +243,10 @@ public class Controller {
     private void saveScript() {
         try {
             FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Save Image");
+            fileChooser.setTitle("Save Script");
             scriptFile = fileChooser.showSaveDialog(parent.getScene().getWindow());
             BufferedWriter writer = new BufferedWriter(new FileWriter(scriptFile));
-            writer.write(getScript());
+            writer.write(getMaskScript());
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -268,28 +268,56 @@ public class Controller {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < images.size(); i++)
             for (int j = 0; j < fragments.get(i).size(); j++) {
-                sb.append(getFileName(i, j)).append(";").append(fragments.get(i).get(j).getLabel()).append("\n");
+                sb.append(getOutputFileName(i)).append(";").append(fragments.get(i).get(j).getLabel()).append("\n");
             }
         return sb.toString();
     }
 
-    private String getScript() {
+    private String getMaskScript() {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < images.size(); i++)
+        for (int i = 0; i < images.size(); i++) {
+            Image image = new Image(images.get(i).toURI().toString());
+            sb.append("convert -size ").append(image.getWidth()).append("x").append(image.getHeight())
+                    .append(" xc:black ");
+
             for (int j = 0; j < fragments.get(i).size(); j++) {
                 Fragment f = fragments.get(i).get(j);
-                sb.append("convert ").append(images.get(i).getName()).append(" -crop ")
-                        .append(getWidthPixelsFromCoordinate(f.getWidth())).append("x")
-                        .append(getHeightPixelsFromCoordinate(f.getHeight())).append("+")
-                        .append(getWidthPixelsFromCoordinate(f.getxOffset())).append("+")
-                        .append(getHeightPixelsFromCoordinate(f.getyOffset())).append(" ")
-                        .append(getFileName(i, j)).append("\n");
+                sb.append("-fill ")
+                        .append(getFragmentColor(f))
+                        .append(" -draw \"rectangle ")
+                        .append(getWidthPixelsFromCoordinate(f.getxOffset()))
+                        .append(",")
+                        .append(getHeightPixelsFromCoordinate(f.getyOffset()))
+                        .append(" ")
+                        .append(getWidthPixelsFromCoordinate(f.getxOffset() + f.getWidth()))
+                        .append(",")
+                        .append(getHeightPixelsFromCoordinate(f.getyOffset() + f.getHeight()))
+                        .append("\" ");
             }
+            sb.append(getOutputFileName(i)).append("\n");
+        }
         return sb.toString();
     }
 
-    private String getFileName(int fileIndex, int fragmentIndex) {
-        return "fragment_" + removeFileExtension(images.get(fileIndex).getName()) + "_" + fragmentIndex + ".png";
+    private String getFragmentColor(Fragment fragment) {
+        switch (fragment.getLabel()) {
+            case TEXT:
+                return "green";
+            case FORMULA:
+                return "purple";
+            case TABLE:
+                return "yellow";
+            case REFERENCE:
+                return "blue";
+            case FIGURE:
+                return "red";
+            default:
+                return "white";
+        }
+    }
+
+    private String getOutputFileName(int fileIndex) {
+        return removeFileExtension(images.get(fileIndex).getName()) + "_mask" + ".png";
     }
 
     private String removeFileExtension(String fileName) {
