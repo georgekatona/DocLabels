@@ -7,9 +7,9 @@ public class Fragment {
 
     private double width;
     private double height;
-    private Label label;
+    private String label;
 
-    public Fragment(double xOffset, double yOffset, double width, double height, Label label) {
+    public Fragment(double xOffset, double yOffset, double width, double height, String label) {
         this.xOffset = xOffset;
         this.yOffset = yOffset;
         this.width = width;
@@ -33,7 +33,7 @@ public class Fragment {
         return height;
     }
 
-    public Label getLabel() {
+    public String getLabel() {
         return label;
     }
 }

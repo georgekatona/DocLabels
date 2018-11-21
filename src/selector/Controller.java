@@ -1,7 +1,6 @@
 package selector;
 
 import javafx.fxml.FXML;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.image.Image;
@@ -13,17 +12,19 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.stage.FileChooser;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
 public class Controller {
 
-    private static final String LABEL_DATA_NAME = "label_data";
+    private static final String LABEL_OPTIONS_FILE = ".labels";
+
+    private static final String[] LABEL_COLORS = {"green", "purple", "yellow", "blue", "red", "aqua", " fuchsia",
+            "gray", "lime", "maroon", "navy", "olive", "silver", "teal"};
 
     private final Rectangle rect;
 
@@ -41,23 +42,36 @@ public class Controller {
     @FXML
     private AnchorPane parent;
     @FXML
-    private CheckBox saveLabelsDataCB;
-    @FXML
     private ImageView imageToLabel;
 
     private int currentImageIndex;
     private List<File> images;
     private List<List<Fragment>> fragments = new ArrayList<>();
 
-    List<Stack<Fragment>> deletedFragments = new Stack<>();
-    private File scriptFile;
+    private List<Stack<Fragment>> deletedFragments = new Stack<>();
+    private List<String> labels;
 
     public Controller() {
+        labels = getLabelsFromFile();
         rect = new Rectangle(0, 0, 0, 0);
         rect.setStroke(Color.BLUE);
         rect.setStrokeWidth(1);
         rect.setStrokeLineCap(StrokeLineCap.ROUND);
         rect.setFill(Color.LIGHTBLUE.deriveColor(0, 1.2, 1, 0.6));
+    }
+
+    private List<String> getLabelsFromFile() {
+        ArrayList<String> labels = new ArrayList<>();
+
+        File file = new File(System.getProperty("user.dir") + File.separator + LABEL_OPTIONS_FILE);
+
+        try {
+            labels.addAll(Files.readAllLines(file.toPath(), Charset.defaultCharset()));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return labels;
     }
 
     private void showImage(File file) {
@@ -129,8 +143,8 @@ public class Controller {
         ContextMenu contextMenu = new ContextMenu();
 
         ArrayList<MenuItem> items = new ArrayList<>();
-        for (Label l : Label.values()) {
-            MenuItem item = new MenuItem(l.name());
+        for (String l : labels) {
+            MenuItem item = new MenuItem(l);
             item.setOnAction(event -> selectLabel(l));
             items.add(item);
         }
@@ -139,7 +153,7 @@ public class Controller {
         contextMenu.show(parent, xEnd, yEnd);
     }
 
-    private void selectLabel(Label label) {
+    private void selectLabel(String label) {
         Fragment f = new Fragment(Math.min(xStart, xEnd), Math.min(yStart, yEnd),
                 Math.abs(xStart - xEnd), Math.abs(yStart - yEnd), label);
         fragments.get(currentImageIndex).add(f);
@@ -187,27 +201,38 @@ public class Controller {
 
     private void printFragment(Fragment f) {
         Rectangle finalRect = new Rectangle(f.getxOffset(), f.getyOffset(), f.getWidth(), f.getHeight());
+
+        finalRect.setStroke(Color.BLACK);
+        finalRect.setFill(Color.LIGHTGRAY.deriveColor(0, 1.2, 1, 0.6));
+
         switch (f.getLabel()) {
-            case TEXT:
+            case "TEXT":
                 finalRect.setStroke(Color.BLACK);
                 finalRect.setFill(Color.LIGHTGRAY.deriveColor(0, 1.2, 1, 0.6));
                 break;
-            case FORMULA:
+            case "FORMULA":
                 finalRect.setStroke(Color.YELLOW);
                 finalRect.setFill(Color.YELLOW.deriveColor(0, 1.2, 1, 0.6));
                 break;
-            case TABLE:
+            case "TABLE":
                 finalRect.setStroke(Color.PINK);
                 finalRect.setFill(Color.LIGHTPINK.deriveColor(0, 1.2, 1, 0.6));
                 break;
-            case REFERENCE:
+            case "REFERENCE":
                 finalRect.setStroke(Color.DARKCYAN);
                 finalRect.setFill(Color.CYAN.deriveColor(0, 1.2, 1, 0.6));
                 break;
-            case FIGURE:
+            case "FIGURE":
                 finalRect.setStroke(Color.GREEN);
                 finalRect.setFill(Color.LIGHTGREEN.deriveColor(0, 1.2, 1, 0.6));
                 break;
+            case "PICTURE":
+                finalRect.setStroke(Color.DARKGREEN);
+                finalRect.setFill(Color.GREEN.deriveColor(0, 1.2, 1, 0.5));
+                break;
+            default:
+                finalRect.setStroke(Color.BLACK);
+                finalRect.setFill(Color.DARKGRAY.deriveColor(0, 1.2, 1, 0.4));
         }
 
         finalRect.setStrokeWidth(1);
@@ -226,9 +251,6 @@ public class Controller {
     public void saveFragments() {
         if (!isFragmentsEmpty()) {
             saveScript();
-            if (saveLabelsDataCB.isSelected()) {
-                saveLabels();
-            }
         }
     }
 
@@ -244,33 +266,13 @@ public class Controller {
         try {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Save Script");
-            scriptFile = fileChooser.showSaveDialog(parent.getScene().getWindow());
+            File scriptFile = fileChooser.showSaveDialog(parent.getScene().getWindow());
             BufferedWriter writer = new BufferedWriter(new FileWriter(scriptFile));
             writer.write(getMaskScript());
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    private void saveLabels() {
-        try {
-            File file = new File(scriptFile.getParent() + File.separator + LABEL_DATA_NAME);
-            BufferedWriter writer = new BufferedWriter(new FileWriter(file));
-            writer.write(getLabelData());
-            writer.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private String getLabelData() {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < images.size(); i++)
-            for (int j = 0; j < fragments.get(i).size(); j++) {
-                sb.append(getOutputFileName(i)).append(";").append(fragments.get(i).get(j).getLabel()).append("\n");
-            }
-        return sb.toString();
     }
 
     private String getMaskScript() {
@@ -300,19 +302,17 @@ public class Controller {
     }
 
     private String getFragmentColor(Fragment fragment) {
-        switch (fragment.getLabel()) {
-            case TEXT:
-                return "green";
-            case FORMULA:
-                return "purple";
-            case TABLE:
-                return "yellow";
-            case REFERENCE:
-                return "blue";
-            case FIGURE:
-                return "red";
-            default:
-                return "white";
+
+        int labelIndex = labels.indexOf(fragment.getLabel());
+
+        if (labelIndex != -1 && labelIndex < LABEL_COLORS.length) {
+            return LABEL_COLORS[labelIndex];
+        } else {
+            int r = Math.floorMod(fragment.getLabel().hashCode(), 256);
+            int g = Math.floorMod(fragment.getLabel().hashCode() * 36, 256);
+            int b = Math.floorMod(fragment.getLabel().hashCode() * 91, 256);
+
+            return "\'rgb(" + r + "," + g + "," + b + ")\'";
         }
     }
 

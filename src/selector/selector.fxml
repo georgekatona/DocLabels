@@ -20,6 +20,5 @@
       <Button layoutX="310.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#saveFragments" text="Save Cropper Script" />
       <Button layoutX="693.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#undoSelection" text="undo" />
       <Button layoutX="765.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#redoSelection" text="redo" />
-      <CheckBox fx:id="saveLabelsDataCB" layoutX="474.0" layoutY="15.0" mnemonicParsing="false" selected="true" text="Save Labels Data" />
     </children>
 </AnchorPane>
