@@ -1,36 +1,36 @@
 package selector;
 
 public class Fragment {
-    private double xOffset;
-    private double yOffset;
+    private int minX;
+    private int minY;
 
+    private int maxX;
+    private int maxY;
 
-    private double width;
-    private double height;
     private String label;
 
-    public Fragment(double xOffset, double yOffset, double width, double height, String label) {
-        this.xOffset = xOffset;
-        this.yOffset = yOffset;
-        this.width = width;
-        this.height = height;
+    public Fragment(int minX, int minY, int maxX, int maxY, String label) {
+        this.minX = minX;
+        this.minY = minY;
+        this.maxX = maxX;
+        this.maxY = maxY;
         this.label = label;
     }
 
-    public double getxOffset() {
-        return xOffset;
+    public int getMinX() {
+        return minX;
     }
 
-    public double getyOffset() {
-        return yOffset;
+    public int getMinY() {
+        return minY;
     }
 
-    public double getWidth() {
-        return width;
+    public int getMaxX() {
+        return maxX;
     }
 
-    public double getHeight() {
-        return height;
+    public int getMaxY() {
+        return maxY;
     }
 
     public String getLabel() {

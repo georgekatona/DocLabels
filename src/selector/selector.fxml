@@ -6,13 +6,18 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.AnchorPane?>
 
+        <!---->
+
 <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="selector.Controller">
     <children>
         <Button layoutX="14.0" layoutY="14.0" mnemonicParsing="false" onMouseClicked="#openImages" text="Open Images" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="10.0" />
         <Button layoutX="128.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#prevImage" prefWidth="80.0" text="Previous" />
         <Button layoutX="220.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#nextImage" prefWidth="80.0" text="Next" />
-        <AnchorPane fx:id="parent" onMouseDragged="#onMouseDragged" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="50.0">
-            <ImageView fx:id="imageToLabel" fitHeight="900.0" fitWidth="1500.0" onMousePressed="#startSelection" onMouseReleased="#endSelection" preserveRatio="true" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+        <AnchorPane fx:id="parent" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="50.0">
+            <ImageView fx:id="imageToLabel" fitHeight="900.0" fitWidth="1500.0" onMouseClicked="#smartSelect"
+                       preserveRatio="true" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
+                       AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" onMousePressed="#startRectSelection"
+                       onMouseReleased="#endSelection" onMouseDragged="#onMouseDragged">
             <viewport>
                <Rectangle2D />
             </viewport></ImageView>

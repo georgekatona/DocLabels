@@ -12,7 +12,15 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.stage.FileChooser;
 
-import java.io.*;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferByte;
+import java.awt.image.DataBufferUShort;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -28,16 +36,19 @@ public class Controller {
 
     private final Rectangle rect;
 
-    private double xStart;
-    private double xEnd;
-    private double yStart;
-    private double yEnd;
+    private int xMin;
+    private int xMax;
+    private int yMin;
+    private int yMax;
 
     private double imageWidth;
     private double imageHeight;
 
     private double ivWidth;
     private double ivHeight;
+
+    private int gridWidth = 5;
+    int[][] img;
 
     @FXML
     private AnchorPane parent;
@@ -50,6 +61,11 @@ public class Controller {
 
     private List<Stack<Fragment>> deletedFragments = new Stack<>();
     private List<String> labels;
+    private ConnectedComponent prevComponent;
+    private double rectStartX;
+    private double rectStartY;
+    private double rectEndX;
+    private double rectEndY;
 
     public Controller() {
         labels = getLabelsFromFile();
@@ -59,6 +75,7 @@ public class Controller {
         rect.setStrokeLineCap(StrokeLineCap.ROUND);
         rect.setFill(Color.LIGHTBLUE.deriveColor(0, 1.2, 1, 0.6));
     }
+
 
     private List<String> getLabelsFromFile() {
         ArrayList<String> labels = new ArrayList<>();
@@ -82,14 +99,21 @@ public class Controller {
 
         ivWidth = imageToLabel.getFitWidth();
         ivHeight = imageToLabel.getFitHeight();
+
+        try {
+            BufferedImage bi = ImageIO.read(images.get(currentImageIndex));
+            img = convertToBoolArray(bi);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void startSelection(MouseEvent mouseEvent) {
-        xStart = mouseEvent.getX();
-        yStart = mouseEvent.getY();
+    public void startRectSelection(MouseEvent mouseEvent) {
+        rectStartX = mouseEvent.getX();
+        rectStartY = mouseEvent.getY();
 
-        rect.setX(xStart);
-        rect.setY(yStart);
+        rect.setX(rectStartX);
+        rect.setY(rectStartY);
         rect.setWidth(0);
         rect.setHeight(0);
 
@@ -99,35 +123,44 @@ public class Controller {
     public void onMouseDragged(MouseEvent mouseEvent) {
         double x = roundToImageHorizontalBounds(mouseEvent.getX());
         double y = roundToImageVerticalBounds(mouseEvent.getY());
-        double offsetX = x - xStart;
-        double offsetY = y - yStart;
+        double offsetX = x - rectStartX;
+        double offsetY = y - rectStartY;
 
         if (offsetX > 0)
             rect.setWidth(offsetX);
         else {
             rect.setX(x);
-            rect.setWidth(xStart - rect.getX());
+            rect.setWidth(rectStartX - rect.getX());
         }
         if (offsetY > 0) {
             rect.setHeight(offsetY);
         } else {
             rect.setY(y);
-            rect.setHeight(yStart - rect.getY());
+            rect.setHeight(rectStartY - rect.getY());
         }
     }
 
     public void endSelection(MouseEvent mouseEvent) {
-        xEnd = mouseEvent.getX();
-        yEnd = mouseEvent.getY();
+        rectEndX = mouseEvent.getX();
+        rectEndY = mouseEvent.getY();
 
-        xStart = roundToImageHorizontalBounds(xStart);
-        xEnd = roundToImageHorizontalBounds(xEnd);
+        rectStartX = roundToImageHorizontalBounds(rectStartX);
+        rectEndX = roundToImageHorizontalBounds(rectEndX);
 
-        yStart = roundToImageVerticalBounds(yStart);
-        yEnd = roundToImageVerticalBounds(yEnd);
+        rectStartY = roundToImageVerticalBounds(rectStartY);
+        rectEndY = roundToImageVerticalBounds(rectEndY);
 
-        showPopupMenu();
+        int x1 = (int) Math.round(getWidthPixelsFromCoordinate(rectStartX));
+        int x2 = (int) Math.round(getWidthPixelsFromCoordinate(rectEndX));
+        int y1 = (int) Math.round(getHeightPixelsFromCoordinate(rectStartY));
+        int y2 = (int) Math.round(getHeightPixelsFromCoordinate(rectEndY));
 
+        Fragment f = dropWhiteSpace(Math.min(x1, x2), Math.max(x1, x2),
+                Math.min(y1, y2), Math.max(y1, y2));
+
+        fragments.get(currentImageIndex).add(f);
+        removeTempRect();
+        updateView();
     }
 
     private void removeTempRect() {
@@ -150,12 +183,12 @@ public class Controller {
         }
 
         contextMenu.getItems().addAll(items);
-        contextMenu.show(parent, xEnd, yEnd);
+        contextMenu.show(parent, convertShownX(xMax), convertShownY(yMax));
     }
 
     private void selectLabel(String label) {
-        Fragment f = new Fragment(Math.min(xStart, xEnd), Math.min(yStart, yEnd),
-                Math.abs(xStart - xEnd), Math.abs(yStart - yEnd), label);
+        Fragment f = new Fragment(xMin, yMin,
+                xMax, yMax, label);
         fragments.get(currentImageIndex).add(f);
         updateView();
         removeTempRect();
@@ -200,10 +233,8 @@ public class Controller {
     }
 
     private void printFragment(Fragment f) {
-        Rectangle finalRect = new Rectangle(f.getxOffset(), f.getyOffset(), f.getWidth(), f.getHeight());
-
-        finalRect.setStroke(Color.BLACK);
-        finalRect.setFill(Color.LIGHTGRAY.deriveColor(0, 1.2, 1, 0.6));
+        Rectangle finalRect = new Rectangle(convertShownX(f.getMinX()), convertShownY(f.getMinY()),
+                convertShownX(f.getMaxX() - f.getMinX()), convertShownY(f.getMaxY() - f.getMinY()));
 
         switch (f.getLabel()) {
             case "TEXT":
@@ -230,14 +261,26 @@ public class Controller {
                 finalRect.setStroke(Color.DARKGREEN);
                 finalRect.setFill(Color.GREEN.deriveColor(0, 1.2, 1, 0.5));
                 break;
+            case "CODE":
+                finalRect.setStroke(Color.CYAN);
+                finalRect.setFill(Color.LIGHTCYAN.deriveColor(0, 1.2, 1, 0.6));
+                break;
             default:
                 finalRect.setStroke(Color.BLACK);
-                finalRect.setFill(Color.DARKGRAY.deriveColor(0, 1.2, 1, 0.4));
+                finalRect.setFill(Color.DARKGRAY.deriveColor(0, 1.2, 1, 0.2));
         }
 
         finalRect.setStrokeWidth(1);
         finalRect.setStrokeLineCap(StrokeLineCap.ROUND);
         parent.getChildren().add(finalRect);
+    }
+
+    private double convertShownX(int x) {
+        return ((double) x) * getShownImageWidth() / imageWidth;
+    }
+
+    private double convertShownY(int y) {
+        return ((double) y) * getShownImageHeight() / imageHeight;
     }
 
     private double getWidthPixelsFromCoordinate(double x) {
@@ -287,13 +330,13 @@ public class Controller {
                 sb.append("-fill ")
                         .append(getFragmentColor(f))
                         .append(" -draw \"rectangle ")
-                        .append(getWidthPixelsFromCoordinate(f.getxOffset()))
+                        .append(f.getMinX())
                         .append(",")
-                        .append(getHeightPixelsFromCoordinate(f.getyOffset()))
+                        .append(f.getMinY())
                         .append(" ")
-                        .append(getWidthPixelsFromCoordinate(f.getxOffset() + f.getWidth()))
+                        .append(f.getMaxX())
                         .append(",")
-                        .append(getHeightPixelsFromCoordinate(f.getyOffset() + f.getHeight()))
+                        .append(f.getMaxY())
                         .append("\" ");
             }
             sb.append(getOutputFileName(i)).append("\n");
@@ -382,6 +425,201 @@ public class Controller {
     private void updateView() {
         removeAllRects();
         printFragments(fragments.get(currentImageIndex));
+    }
+
+    public void smartSelect(MouseEvent mouseEvent) {
+        double imageX = getWidthPixelsFromCoordinate(mouseEvent.getX());
+        double imageY = getHeightPixelsFromCoordinate(mouseEvent.getY());
+
+        int gridIndexX = (int) (imageX / gridWidth);
+        int gridIndexY = (int) (imageY / gridWidth);
+
+        ConnectedComponent initialComponent;
+        if (mouseEvent.isControlDown()) {
+            initialComponent = prevComponent;
+        } else {
+            initialComponent = new ConnectedComponent(gridWidth);
+        }
+        ConnectedComponent component = getConnectedComponents(gridIndexX, gridIndexY, gridWidth, initialComponent);
+
+        component = extendComponent(component);
+
+        Fragment f = dropWhiteSpace(component.getMinX(), component.getMaxX(),
+                component.getMinY(), component.getMaxY());
+
+        fragments.get(currentImageIndex).add(f);
+        updateView();
+
+        prevComponent = component;
+    }
+
+    private Fragment dropWhiteSpace(int minX, int maxX, int minY, int maxY) {
+
+        for (int i = minX; i < maxX; i++) {
+            boolean onlyWhite = true;
+            for (int j = minY; j < maxY; j++) {
+                if (img[j][i] != 0xFFFFFFFF) {
+                    onlyWhite = false;
+                    break;
+                }
+            }
+            if (onlyWhite) {
+                minX = i + 1;
+            } else {
+                break;
+            }
+        }
+        for (int i = maxX; i > minX; i--) {
+            boolean onlyWhite = true;
+            for (int j = minY; j < maxY; j++) {
+                if (img[j][i] != 0xFFFFFFFF) {
+                    onlyWhite = false;
+                    break;
+                }
+            }
+            if (onlyWhite) {
+                maxX = i - 1;
+            } else {
+                break;
+            }
+        }
+        for (int j = minY; j < maxY; j++) {
+            boolean onlyWhite = true;
+            for (int i = minX; i < maxX; i++) {
+                if (img[j][i] != 0xFFFFFFFF) {
+                    onlyWhite = false;
+                    break;
+                }
+            }
+            if (onlyWhite) {
+                minY = j + 1;
+            } else {
+                break;
+            }
+        }
+        for (int j = maxY; j > minY; j--) {
+            boolean onlyWhite = true;
+            for (int i = minX; i < maxX; i++) {
+                if (img[j][i] != 0xFFFFFFFF) {
+                    onlyWhite = false;
+                    break;
+                }
+            }
+            if (onlyWhite) {
+                maxY = j - 1;
+            } else {
+                break;
+            }
+        }
+
+        return new Fragment(minX, minY, maxX, maxY, labels.get(0));
+    }
+
+    private ConnectedComponent extendComponent(ConnectedComponent component) {
+        // Make component rectangular
+        int minX = component.getMinCellIndexX();
+        int maxX = component.getMaxCellIndexX();
+        int minY = component.getMinCellIndexY();
+        int maxY = component.getMaxCellIndexY();
+        boolean outOfRange = false;
+
+        for (int i = minX; i < maxX + 1; i++) {
+            for (int j = minY; j < maxY + 1; j++) {
+                if (!component.contains(i, j)) {
+                    for (Cell c : getConnectedComponents(i, j, gridWidth, component).getCells()) {
+                        component.insertCell(c);
+                        if (c.getIndexX() > maxX || c.getIndexX() < minX ||
+                                c.getIndexY() > maxY || c.getIndexY() < minY) {
+                            outOfRange = true;
+                        }
+                    }
+                }
+            }
+        }
+        if (outOfRange) {
+            component = extendComponent(component);
+        }
+        return component;
+    }
+
+    private ConnectedComponent getConnectedComponents(int gridIndexX, int gridIndexY, int gridWidth,
+                                                      ConnectedComponent component) {
+
+        System.out.println("[" + gridIndexX + ";" + gridIndexY + "]");
+        Cell c = new Cell(gridIndexX, gridIndexY);
+        if (hasColoredPixel(c, gridWidth)) {
+            component.insertCell(c);
+            if (!component.contains(gridIndexX, gridIndexY - 1))
+                component = getConnectedComponents(gridIndexX, gridIndexY - 1, gridWidth, component);
+            if (!component.contains(gridIndexX + 1, gridIndexY))
+                component = getConnectedComponents(gridIndexX + 1, gridIndexY, gridWidth, component);
+            if (!component.contains(gridIndexX, gridIndexY + 1))
+                component = getConnectedComponents(gridIndexX, gridIndexY + 1, gridWidth, component);
+            if (!component.contains(gridIndexX - 1, gridIndexY))
+                component = getConnectedComponents(gridIndexX - 1, gridIndexY, gridWidth, component);
+        }
+        return component;
+    }
+
+    private boolean hasColoredPixel(Cell c, int gridWidth) {
+        for (int i = c.getIndexX() * gridWidth; i < (c.getIndexX() + 1) * gridWidth && i >= 0 && i < imageWidth; i++) {
+            for (int j = c.getIndexY() * gridWidth; j < (c.getIndexY() + 1) * gridWidth && j >= 0 && j < imageHeight; j++) {
+                if (img[j][i] != 0xFFFFFFFF) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Returns array of bools containing information if the pixel is white
+    private static int[][] convertToBoolArray(BufferedImage image) {
+
+        final int width = image.getWidth();
+        final int height = image.getHeight();
+        final int pixelLength;
+        int[][] result = new int[height][width];
+
+        final boolean hasAlphaChannel = image.getAlphaRaster() != null;
+        if (hasAlphaChannel) {
+            pixelLength = 4;
+        } else {
+            pixelLength = 3;
+        }
+
+        DataBuffer buffer = image.getRaster().getDataBuffer();
+        if (buffer.getDataType() == DataBuffer.TYPE_BYTE) {
+            final byte[] pixels = ((DataBufferByte) buffer).getData();
+            for (int pixel = 0, row = 0, col = 0; pixel < pixels.length; pixel += pixelLength) {
+                int argb = 0;
+                argb += -16777216; // 255 alpha
+                argb += ((int) pixels[pixel] & 0xff); // blue
+                argb += (((int) pixels[pixel + 1] & 0xff) << 8); // green
+                argb += (((int) pixels[pixel + 2] & 0xff) << 16); // red
+                result[row][col] = argb;
+                col++;
+                if (col == width) {
+                    col = 0;
+                    row++;
+                }
+            }
+        } else {
+            final short[] pixels = ((DataBufferUShort) buffer).getData();
+            for (int pixel = 0, row = 0, col = 0; pixel < pixels.length; pixel += pixelLength) {
+                int argb = 0;
+                argb += -16777216; // 255 alpha
+                argb += ((int) pixels[pixel] & 0xff); // blue
+                argb += (((int) pixels[pixel + 1] & 0xff) << 8); // green
+                argb += (((int) pixels[pixel + 2] & 0xff) << 16); // red
+                result[row][col] = argb;
+                col++;
+                if (col == width) {
+                    col = 0;
+                    row++;
+                }
+            }
+        }
+        return result;
     }
 
 }
