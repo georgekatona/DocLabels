@@ -2,25 +2,25 @@ package selector;
 
 import java.util.HashSet;
 
-public class ConnectedComponent {
+class ConnectedCells {
 
     private int cellWidth;
 
     private HashSet<Cell> cells = new HashSet<>();
 
-    public ConnectedComponent(int cellWidth) {
+    ConnectedCells(int cellWidth) {
         this.cellWidth = cellWidth;
     }
 
-    public void insertCell(Cell newCell) {
+    void insertCell(Cell newCell) {
         cells.add(newCell);
     }
 
-    public HashSet<Cell> getCells(){
+    HashSet<Cell> getCells(){
         return cells;
     }
 
-    public int getMinCellIndexX() {
+    int getMinCellIndexX() {
         int min = Integer.MAX_VALUE;
         for (Cell c : cells) {
             if (c.getIndexX() < min)
@@ -29,7 +29,7 @@ public class ConnectedComponent {
         return min;
     }
 
-    public int getMaxCellIndexX() {
+    int getMaxCellIndexX() {
         int max = Integer.MIN_VALUE;
         for (Cell c : cells) {
             if (c.getIndexX() > max)
@@ -39,7 +39,7 @@ public class ConnectedComponent {
     }
 
 
-    public int getMinCellIndexY() {
+    int getMinCellIndexY() {
         int min = Integer.MAX_VALUE;
         for (Cell c : cells) {
             if (c.getIndexY() < min)
@@ -48,7 +48,7 @@ public class ConnectedComponent {
         return min;
     }
 
-    public int getMaxCellIndexY() {
+    int getMaxCellIndexY() {
         int max = Integer.MIN_VALUE;
         for (Cell c : cells) {
             if (c.getIndexY() > max)
@@ -57,23 +57,23 @@ public class ConnectedComponent {
         return max;
     }
 
-    public int getMinX() {
+    int getMinX() {
         return getMinCellIndexX() * cellWidth;
     }
 
-    public int getMaxX() {
+    int getMaxX() {
         return ((getMaxCellIndexX() + 1) * cellWidth - 1);
     }
 
-    public int getMinY() {
+    int getMinY() {
         return getMinCellIndexY() * cellWidth;
     }
 
-    public int getMaxY() {
+    int getMaxY() {
         return ((getMaxCellIndexY() + 1) * cellWidth - 1);
     }
 
-    public boolean contains(int indexX, int indexY) {
+    boolean contains(int indexX, int indexY) {
         return cells.contains(new Cell(indexX, indexY));
     }
 }
