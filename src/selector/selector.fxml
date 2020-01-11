@@ -1,25 +1,51 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <?import javafx.geometry.Rectangle2D?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.*?>
 <?import javafx.scene.image.ImageView?>
-<?import javafx.scene.layout.AnchorPane?>
-
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="selector.Controller">
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0"
+            prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="selector.Controller" onKeyPressed="#keyPressed" onScroll="#mouseScroll">
     <children>
-        <Button layoutX="14.0" layoutY="14.0" mnemonicParsing="false" onMouseClicked="#openImages" text="Open Images" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="10.0" />
-        <Button layoutX="128.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#prevImage" prefWidth="80.0" text="Previous" />
-        <Button layoutX="220.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#nextImage" prefWidth="80.0" text="Next" />
-        <AnchorPane fx:id="parent" onMouseDragged="#onMouseDragged" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="50.0">
-            <ImageView fx:id="imageToLabel" fitHeight="900.0" fitWidth="1500.0" onMousePressed="#startSelection" onMouseReleased="#endSelection" preserveRatio="true" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-            <viewport>
-               <Rectangle2D />
-            </viewport></ImageView>
+        <Button layoutX="14.0" layoutY="14.0" mnemonicParsing="false" onMouseClicked="#openImages" text="Open Images"
+                AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="10.0" focusTraversable="false"/>
+        <Button layoutX="128.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#prevImage" prefWidth="80.0"
+                text="Previous" focusTraversable="false"/>
+        <Button layoutX="220.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#nextImage" prefWidth="80.0"
+                text="Next" focusTraversable="false"/>
+        <Text text="SmartTool tolerance:" layoutX="670.0" AnchorPane.topAnchor="15.0"/>
+        <Spinner fx:id="gridWidthSpinner" layoutX="820.0" layoutY="10.0" maxWidth="80" focusTraversable="false">
+            <valueFactory>
+                <SpinnerValueFactory.IntegerSpinnerValueFactory min="1" max="10" initialValue="5"/>
+            </valueFactory>
+        </Spinner>
+        <Text text="Class ID:" layoutX="920" AnchorPane.topAnchor="15.0"/>
+        <Spinner fx:id="classSpinner" layoutX="990.0" layoutY="10.0" maxWidth="80" focusTraversable="false">
+            <valueFactory>
+                <SpinnerValueFactory.IntegerSpinnerValueFactory min="1" max="99" initialValue="1"/>
+            </valueFactory>
+        </Spinner>
+        <CheckBox fx:id="strapCheckBox" selected="true" text="AutoStrap" layoutX="1120" AnchorPane.topAnchor="15.0"/>
+        <CheckBox fx:id="linesCheckBox" selected="false" text="Supporting Lines" layoutX="1230" AnchorPane.topAnchor="15.0"/>
+        <AnchorPane fx:id="parent" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
+                    AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="50.0">
+            <ImageView fx:id="imageView" fitHeight="900.0" fitWidth="1500.0" onMouseClicked="#onClick"
+                       preserveRatio="true" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
+                       AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" focusTraversable="true"
+                       onMouseMoved="#onMouseMoved" onMouseEntered="#onMouseEntered" onMouseExited="#onMouseExited"
+                       onMouseDragged="#onMouseDragged" onMousePressed="#onMousePressed"
+                       onMouseReleased="#onMouseReleased">
+                <viewport>
+                    <Rectangle2D/>
+                </viewport>
+            </ImageView>
         </AnchorPane>
-      <Button layoutX="310.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#saveFragments" text="Save Cropper Script" />
-      <Button layoutX="693.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#undoSelection" text="undo" />
-      <Button layoutX="765.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#redoSelection" text="redo" />
-      <CheckBox fx:id="saveLabelsDataCB" layoutX="474.0" layoutY="15.0" mnemonicParsing="false" selected="true" text="Save Labels Data" />
+        <Button layoutX="310.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#saveComponents"
+                text="Save Components" focusTraversable="false"/>
+        <Button layoutX="500.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#undoSelection" text="undo"
+                focusTraversable="false"/>
+        <Button layoutX="570.0" layoutY="10.0" mnemonicParsing="false" onMouseClicked="#redoSelection" text="redo"
+                focusTraversable="false"/>
     </children>
 </AnchorPane>

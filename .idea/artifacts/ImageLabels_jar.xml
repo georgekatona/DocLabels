@@ -1,8 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" build-on-make="true" name="ImageLabels:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/ImageLabels_jar</output-path>
-    <root id="archive" name="ImageLabels.jar">
-      <element id="module-output" name="ImageLabels" />
-    </root>
-  </artifact>
-</component>
